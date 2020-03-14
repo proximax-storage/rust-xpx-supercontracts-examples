@@ -10,6 +10,8 @@ keywords = ["distributed", "blockchain", "sdk", "supercontract", "xpx"]
 categories = ["cryptography", "development-tools", "wasm"]
 license = "Apache-2.0"
 repository = "https://github.com/proximax-storage/rust-xpx-supercontracts-sdk"
+
+[lib]
 crate-type = ["cdylib"]
 
 [dependencies]

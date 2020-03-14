@@ -25,7 +25,7 @@ struct CsvIcoData {
 
 #[derive(Serialize)]
 struct IcoInfo {
-	supercontract_id: Cid,
+	supercontract_id:  Cid,
 	mosaic_id: i64,
 }
 
