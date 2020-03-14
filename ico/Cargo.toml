@@ -1,9 +1,20 @@
 [package]
-name = "ico"
+name = "xpx-supercontracts-example-ico"
 version = "0.1.0"
-authors = ["Evgeny Ukhanov <mrlsd@ya.ru>"]
+authors = ["ProxymaX Core Development Team","Evgeny Ukhanov <mrlsd@ya.ru>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+homepage = "https://www.proximax.io/"
+documentation = "https://docs.rs/xpx-supercontracts-sdk"
+readme = "README.md"
+keywords = ["distributed", "blockchain", "sdk", "supercontract", "xpx"]
+categories = ["cryptography", "development-tools", "wasm"]
+license = "Apache-2.0"
+repository = "https://github.com/proximax-storage/rust-xpx-supercontracts-sdk"
+crate-type = ["cdylib"]
 
 [dependencies]
+xpx-supercontracts-sdk = { path = "/home/pc/dev/rs/rust-xpx-supercontracts-sdk/" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+failure = "0.1.5"
+csv = "1.1"
