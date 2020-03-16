@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use xpx_supercontracts_sdk::{
 	statuses::{Error, Result},
 	storage::{save_result, storage_get},
-	transactions::{flush, get_mosaci_id, get_supercontract, mosaic_definition, transfer},
+	transactions::{flush, get_mosaci_id, get_supercontract, mosaic_definition, transfer, get_initiator_pubkey},
 	transactions_type::{Cid, FUNCTION_ERROR, FUNCTION_RETURN_SUCCESS, GetMosaicID, MosaicDefinition, MosaicProperties, SuperContract, Transfer},
 	utils::{constructor, debug_message},
 };
@@ -23,7 +23,7 @@ struct CsvIcoData {
 	amount: i64,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize,)]
 struct IcoInfo {
 	supercontract_id:  Cid,
 	mosaic_id: i64,
@@ -169,4 +169,74 @@ fn save_mosaic_info(supercontract_id: Cid, mosaic_id: i64) -> i64 {
 #[no_mangle]
 pub extern "C" fn ico_init() -> i64 {
 	constructor(create_ico)
+}
+
+#[no_mangle]
+pub extern "C" fn send(param1: i64, param2: i64, param3: i64, param4: i64, param5: i64, amount: i64) -> i64 {
+	let res = get_initiator_pubkey();
+	if let Err(err) = res {
+		debug_message(&format!("failed get_initiator_pubkey: {:?}", err));
+		return FUNCTION_ERROR;		
+	}
+	let pk = res.unwrap();
+
+	let mut bytes: Vec<u8> = vec![];
+	let mut p1 = param1.to_le_bytes().to_vec();
+	let mut p2 = param2.to_le_bytes().to_vec();
+	let mut p3 = param3.to_le_bytes().to_vec();
+	let mut p4 = param4.to_le_bytes().to_vec();
+	let mut p5 = param5.to_le_bytes().to_vec();
+	bytes.append(&mut p1);
+	bytes.append(&mut p2);
+	bytes.append(&mut p3);
+	bytes.append(&mut p4);
+	bytes.append(&mut p5);
+
+	let res = std::str::from_utf8(&bytes);
+	if let Err(err) = res {
+		debug_message(&format!("failed convert address: {:?}", err));
+		return FUNCTION_ERROR;
+	}
+	
+	let address: &str = res.unwrap(); 
+	debug_message(&format!("send [{:?}] to address: {:?}", amount, address));
+
+	let res = storage_get(&ICO_MOSAIC_INFO.to_string());
+	if let Err(err) = res {
+		debug_message(&format!("failed transfer mosaic: {:?}", err));
+		return FUNCTION_ERROR;
+	}
+	let res = res.unwrap();
+	let res = serde_json::from_slice(&res[..]);
+	if let Err(err) = res {
+		debug_message(&format!("failed parse mosaic: {:?}", err));
+		return FUNCTION_ERROR;
+	}
+	let mosaic_info: IcoInfo = res.unwrap();
+
+	let res = get_supercontract();
+	if let Err(err) = res {
+		debug_message(&format!("failed parse ge SuperContract: {:?}", err));
+		return FUNCTION_ERROR;
+	}
+	let sc = res.unwrap();
+	
+	// Check Token owaner
+	if sc.drive.owner != pk {
+		debug_message(&format!("failed send token from not owner's: {:?}", pk));
+		return FUNCTION_ERROR;		
+	}
+	
+	// Transfer tokens
+	let res = transfer(&Transfer {
+		pub_key: pk,
+		amount: amount,
+		asset_id: mosaic_info.mosaic_id as u64,
+	});
+	if let Err(err) = res {
+		debug_message(&format!("failed transfer mosaic: {:?}", err));
+		return FUNCTION_ERROR;
+	}
+	
+	FUNCTION_RETURN_SUCCESS
 }
