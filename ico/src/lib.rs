@@ -5,16 +5,16 @@ use serde::{Deserialize, Serialize};
 use xpx_supercontracts_sdk::{
 	statuses::{Error, Result},
 	storage::{save_result, storage_get},
-	transactions::{flush, get_initiator_pubkey, get_supercontract, mosaic_definition, transfer},
-	transactions_type::{Cid, FUNCTION_ERROR, FUNCTION_RETURN_SUCCESS, GetMosaicID, MosaicDefinition, MosaicProperties, SuperContract, Transfer},
+	transactions::{flush, get_initiator_pubkey, get_supercontract, mosaic_definition, transfer, get_mosaic_id, mosaic_supply_change},
+	transactions_type::{Cid, MosaicSupplyChange, FUNCTION_ERROR, FUNCTION_RETURN_SUCCESS, GetMosaicID, MosaicDefinition, MosaicProperties, SuperContract, Transfer},
 	utils::{constructor, debug_message},
 };
-use xpx_supercontracts_sdk::transactions::get_mosaic_id;
 
 const ICO_CSV_FILE: &str = "ico_init.csv";
 const ICO_MOSAIC_INFO: &str = "ico_info.json";
 const TRANSACTIONS_LIMIT: u8 = 50;
 const MOSAIC_NONCE: u32 = 0;
+const MOSAIC_INCREASE: u8 = 1;
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
 struct CsvIcoData {
@@ -39,6 +39,16 @@ pub fn create_ico() -> i64 {
 		return FUNCTION_ERROR;
 	}
 	let mosaic_id = res.unwrap();
+
+	let res = mosaic_supply_change(&MosaicSupplyChange {
+		asset_id: mosaic_id,
+		supply_type: MOSAIC_INCREASE,
+		delta: 9_000_000_000,
+	});
+	if let Err(err) = res {
+		debug_message(&format!("failed to do mosaic_supply_change: {:?}", err));
+		return FUNCTION_ERROR;
+	}
 
 	let file_result = storage_get(&ICO_CSV_FILE.to_string());
 	if let Err(err) = file_result {
@@ -142,15 +152,11 @@ fn create_mosaic() -> Result<u64> {
 		return Err(Error::DeserializeJson);
 	}
 
-	let mosaic_id = res.unwrap();
-	let res = save_mosaic_info(sc.id, mosaic_id);
-	if res < FUNCTION_RETURN_SUCCESS {
-		return Err(Error::DeserializeJson);
-	}
-
+	let mosaic_id = res.unwrap();	
 	Ok(mosaic_id)
 }
 
+#[allow(dead_code)]
 fn save_mosaic_info(supercontract_id: Cid, mosaic_id: u64) -> i64 {
 	let data_bytes = serde_json::to_vec(&IcoInfo {
 		supercontract_id,
@@ -206,19 +212,6 @@ pub extern "C" fn send(param1: i64, param2: i64, param3: i64, param4: i64, param
 	let address: &str = res.unwrap();
 	debug_message(&format!("send [{:?}] to address: {:?}", amount, address));
 
-	let res = storage_get(&ICO_MOSAIC_INFO.to_string());
-	if let Err(err) = res {
-		debug_message(&format!("failed transfer mosaic: {:?}", err));
-		return FUNCTION_ERROR;
-	}
-	let res = res.unwrap();
-	let res = serde_json::from_slice(&res[..]);
-	if let Err(err) = res {
-		debug_message(&format!("failed parse mosaic: {:?}", err));
-		return FUNCTION_ERROR;
-	}
-	let mosaic_info: IcoInfo = res.unwrap();
-
 	let res = get_supercontract();
 	if let Err(err) = res {
 		debug_message(&format!("failed parse ge SuperContract: {:?}", err));
@@ -226,17 +219,28 @@ pub extern "C" fn send(param1: i64, param2: i64, param3: i64, param4: i64, param
 	}
 	let sc = res.unwrap();
 
-	// Check Token owaner
-	if sc.drive.owner != pk {
+	// Check Token owner
+	if sc.drive.owner.to_uppercase() != pk.to_uppercase() {
 		debug_message(&format!("failed send token from not owner's: {:?}", pk));
 		return FUNCTION_ERROR;
 	}
 
+	let res = get_mosaic_id(&GetMosaicID {
+	owner_public_key: sc.id.clone(),
+	nonce: MOSAIC_NONCE,
+	});
+	if let Err(err) = res {
+	debug_message(&format!("failed get mosaic_id: {:?}", err));
+	return FUNCTION_ERROR;
+	}
+
+	let mosaic_id = res.unwrap();
+	
 	// Transfer tokens
 	let res = transfer(&Transfer {
-		pub_key: pk,
+		pub_key: address.to_string(),
 		amount: amount,
-		asset_id: mosaic_info.mosaic_id as u64,
+		asset_id: mosaic_id,
 	});
 	if let Err(err) = res {
 		debug_message(&format!("failed transfer mosaic: {:?}", err));
