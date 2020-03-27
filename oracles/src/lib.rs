@@ -77,7 +77,7 @@ pub extern "C" fn get_market_info() -> i64 {
 		debug_message(&format!("failed get API KEY: {:?}", err));
 		return FUNCTION_ERROR;
 	}
-	let api_key = res.unwrap();
+	let api_key = res.unwrap().replace("\n", "");
 
 	let res = Url::parse(URL_LIST);
 	if let Err(err) = res {
