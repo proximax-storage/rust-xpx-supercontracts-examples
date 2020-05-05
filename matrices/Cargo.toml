@@ -1,0 +1,19 @@
+[package]
+name = "multiply-matrices-SC"
+version = "0.1.0"
+authors = ["ProxymaX Core Development Team", "Yevhen <iorgachov1998@gmail.com>"]
+edition = "2018"
+homepage = "https://www.proximax.io/"
+documentation = "https://docs.rs/xpx-supercontracts-sdk"
+readme = "README.md"
+keywords = ["distributed", "blockchain", "sdk", "supercontract", "xpx"]
+categories = ["development-tools", "wasm"]
+license = "Apache-2.0"
+repository = "https://github.com/proximax-storage/rust-xpx-supercontracts-sdk"
+
+[dependencies]
+xpx-supercontracts-sdk = "0.2.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+failure = "0.1.5"
+csv = "1.1"
