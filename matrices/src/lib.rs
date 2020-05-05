@@ -1,48 +1,43 @@
 extern crate xpx_supercontracts_sdk;
 extern crate csv;
+extern crate serde;
 
 use xpx_supercontracts_sdk::{
     storage::{storage_get, save_result},
-    statuses:: {Result},
-    transactions_type::FUNCTION_ERROR,
+    statuses:: {Result, Error},
+    transactions_type::{FUNCTION_ERROR, FUNCTION_RETURN_SUCCESS},
     utils::debug_message,
 };
-use xpx_supercontracts_sdk::transactions_type::FUNCTION_RETURN_SUCCESS;
-
 use csv::{WriterBuilder};
 
-pub extern "C" fn multiple_matrices(first: &String, second: &String) -> i64 {
-    let matrix_a = storage_get(&first);
-    let matrix_a = match matrix_a {
-        Ok(matrix_a) =>
-            match parse_matrix(matrix_a.as_ref()) {
-                Ok(res) => res,
-                Err(err) => {
-                    debug_message(&format!("failed to read the first matrix: {:?}", err));
-                    return FUNCTION_ERROR
-                }
-            }
-        Err(err) => {
-            debug_message(&format!("failed to get the first matrix: {:?}", err));
-            return FUNCTION_ERROR
-        }
-    };
+const FIRST_MATRIX: &str = "matrixA.csv";
+const SECOND_MATRIX: &str = "matrixB.csv";
 
-    let matrix_b = storage_get(&second);
-    let matrix_b = match matrix_b {
-        Ok(matrix_b) =>
-            match parse_matrix(matrix_b.as_ref()) {
-                Ok(res) => res,
-                Err(err) => {
-                    debug_message(&format!("failed to read the second matrix: {:?}", err));
-                    return FUNCTION_ERROR
-                },
-            }
-        Err(err) => {
-            debug_message(&format!("failed to get the second matrix: {:?}", err));
-            return FUNCTION_ERROR
-        },
-    };
+#[no_mangle]
+pub extern "C" fn multiple_matrices() -> i64 {
+    let res = storage_get(&FIRST_MATRIX.to_string());
+    if let Err(err) = res {
+        debug_message(&format!("failed load CSV file: {:?}", err));
+        return FUNCTION_ERROR;
+    }
+
+    let matrix_a = parse_matrix(&res.unwrap());
+    if matrix_a.is_err() {
+        return FUNCTION_ERROR;
+    }
+    let matrix_a = matrix_a.unwrap();
+
+    let res = storage_get(&SECOND_MATRIX.to_string());
+    if let Err(err) = res {
+        debug_message(&format!("failed load CSV file: {:?}", err));
+        return FUNCTION_ERROR;
+    }
+
+    let matrix_b = parse_matrix(&res.unwrap());
+    if matrix_b.is_err() {
+        return FUNCTION_ERROR;
+    }
+    let matrix_b = matrix_b.unwrap();
 
     if matrix_a[0].len() != matrix_b.len() {
         debug_message(&format!("matrices can't be multiplied"));
@@ -87,7 +82,12 @@ fn parse_matrix(data: &Vec<u8>) -> Result<Vec<Vec<f64>>> {
 
     let mut matrix: Vec<Vec<f64>> = vec![];
     for res in rdr.deserialize() {
-        let vec: Vec<f64> = res.expect("can't get row");
+        if let Err(err) = res {
+            debug_message(&format!("failed parse csv file: {:?}", err));
+            return Err(Error::DeserializeJson);
+        }
+
+        let vec: Vec<f64> = res.unwrap();
         matrix.push(vec);
     }
 
@@ -100,7 +100,10 @@ fn matrix_to_csv(m:Vec<Vec<f64>>) -> Result<Vec<u8>> {
         .from_writer(vec![]);
 
     for v in m {
-        wtr.serialize(v);
+        if let Err(err) = wtr.serialize(v) {
+            debug_message(&format!("failed parse csv file: {:?}", err));
+            return Err(Error::SerializeJson);
+        }
     }
 
     let d =  wtr.into_inner();

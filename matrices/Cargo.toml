@@ -11,6 +11,9 @@ categories = ["development-tools", "wasm"]
 license = "Apache-2.0"
 repository = "https://github.com/proximax-storage/rust-xpx-supercontracts-sdk"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 xpx-supercontracts-sdk = "0.2.2"
 serde = { version = "1.0", features = ["derive"] }
