@@ -17,7 +17,7 @@ const SECOND_MATRIX: &str = "matrixB.csv";
 pub extern "C" fn multiple_matrices() -> i64 {
     let res = storage_get(&FIRST_MATRIX.to_string());
     if let Err(err) = res {
-        debug_message(&format!("failed load CSV file: {:?}", err));
+        debug_message(&format!("failed load the first CSV file: {:?}", err));
         return FUNCTION_ERROR;
     }
 
@@ -29,7 +29,7 @@ pub extern "C" fn multiple_matrices() -> i64 {
 
     let res = storage_get(&SECOND_MATRIX.to_string());
     if let Err(err) = res {
-        debug_message(&format!("failed load CSV file: {:?}", err));
+        debug_message(&format!("failed load the second CSV file: {:?}", err));
         return FUNCTION_ERROR;
     }
 
@@ -98,11 +98,12 @@ fn parse_matrix(data: &Vec<u8>) -> Result<Vec<Vec<f64>>> {
 fn matrix_to_csv(m:Vec<Vec<f64>>) -> Result<Vec<u8>> {
     let mut wtr = WriterBuilder::new()
         .delimiter(b'\t')
+        .has_headers(false)
         .from_writer(vec![]);
 
     for v in m {
         if let Err(err) = wtr.serialize(v) {
-            debug_message(&format!("failed parse csv file: {:?}", err));
+            debug_message(&format!("failed convert matrix: {:?}", err));
             return Err(Error::SerializeJson);
         }
     }
