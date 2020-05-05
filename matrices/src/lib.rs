@@ -78,6 +78,7 @@ pub extern "C" fn multiple_matrices() -> i64 {
 fn parse_matrix(data: &Vec<u8>) -> Result<Vec<Vec<f64>>> {
     let mut rdr = csv::ReaderBuilder::new()
         .delimiter(b'\t')
+        .has_headers(false)
         .from_reader(&data[..]);
 
     let mut matrix: Vec<Vec<f64>> = vec![];
