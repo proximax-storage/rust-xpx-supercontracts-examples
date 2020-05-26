@@ -16,28 +16,34 @@ const SECOND_MATRIX: &str = "matrixB.csv";
 #[no_mangle]
 pub extern "C" fn multiple_matrices() -> i64 {
     let res = storage_get(&FIRST_MATRIX.to_string());
+    debug_message(&format!("Got: {:?}", FIRST_MATRIX));
     if let Err(err) = res {
         debug_message(&format!("failed load the first CSV file: {:?}", err));
         return FUNCTION_ERROR;
     }
 
+    debug_message(&format!("Start parse matrix: {:?}", FIRST_MATRIX));
     let matrix_a = parse_matrix(&res.unwrap());
     if matrix_a.is_err() {
         return FUNCTION_ERROR;
     }
     let matrix_a = matrix_a.unwrap();
+    debug_message(&format!("End parse matrix: {:?}", FIRST_MATRIX));
 
     let res = storage_get(&SECOND_MATRIX.to_string());
+    debug_message(&format!("Got: {:?}", SECOND_MATRIX));
     if let Err(err) = res {
         debug_message(&format!("failed load the second CSV file: {:?}", err));
         return FUNCTION_ERROR;
     }
 
+    debug_message(&format!("Start parse matrix: {:?}", SECOND_MATRIX));
     let matrix_b = parse_matrix(&res.unwrap());
     if matrix_b.is_err() {
         return FUNCTION_ERROR;
     }
     let matrix_b = matrix_b.unwrap();
+    debug_message(&format!("End parse matrix: {:?}", SECOND_MATRIX));
 
     if matrix_a[0].len() != matrix_b.len() {
         debug_message(&format!("matrices can't be multiplied"));
@@ -46,6 +52,7 @@ pub extern "C" fn multiple_matrices() -> i64 {
 
     let mut matrix_c:Vec<Vec<f64>> = Vec::new();
 
+    debug_message(&format!("Start multiply matrix"));
     for i in 0..matrix_a.len() {
         let mut vec = Vec::new();
         for j in 0..matrix_b[0].len() {
@@ -57,6 +64,7 @@ pub extern "C" fn multiple_matrices() -> i64 {
         }
         matrix_c.push(vec);
     }
+    debug_message(&format!("End multiply matrix"));
 
     let res = match matrix_to_csv(matrix_c) {
         Ok(res) => res,
